@@ -1,9 +1,11 @@
+vertex_names <- function(graph) {
+    if (!is.null(colnames(graph))) return(colnames(graph))
+    return(1:ncol(graph))
+}
+
 # just work with integer vertices for now
-# need parents for multiple vertices!!
 maximal_arid_projection <- function(graph) {
     vertices <- 1:ncol(graph)
-    # di_edges <- list()
-    # bi_edges <- list()
 
     # initialize a new graph with the same vertices but no edges
     new_graph <- graph
@@ -12,28 +14,21 @@ maximal_arid_projection <- function(graph) {
     # TODO: make this an actual dict of reachable closures
     # format: v=reachable_closure(v)
     reachable_closures = list()
-    ancestors <- lapply(vertices, ancestors, graph=graph)# function(vert) ancestors(graph, vert))
-    print("ancestors list: ")
-    print(ancestors)
+    ancestors <- lapply(vertices, ancestors, graph=graph)
     for (a in vertices) {
         for (b in tail(vertices, -a)) {
             u <- NULL
             v <- NULL
             closure <- NULL
 
-            print(paste("a = ", a, ", b = ", b))
             if (a %in% ancestors[[b]]) {
-                print("a in ancestors of b")
                 u <- a
                 v <- b
             } else if (b %in% ancestors[[a]]) {
-                print("b in ancestors of a")
                 u <- b
                 v <- a
             }
-
             
-            print(paste("u = ", u, ", v = ", v))
             added_edge <- FALSE
             if (!is.null(u)) {
                 if (!(v %in% names(reachable_closures))) {
@@ -41,28 +36,17 @@ maximal_arid_projection <- function(graph) {
                 }
                 closure <- reachable_closures[[v]]
                 if (u %in% parents(graph, closure)) {
-                    # di_edges <- c(di_edges, c(u, v))
                     new_graph[u, v] = 1
                     added_edge <- TRUE
                 }
             }
             if (!added_edge) {
-                print(paste("no directed edge between", a, " and ", b))
                 combined_closure_result <- reachable_closure(graph, c(a, b))
                 combined_closure <- combined_closure_result$closure
 
                 b_district <- district(graph, b)
-                if (a %in% b_district) {
-                    print(paste(a, " in district of ", b))
-                }
-                if (subset(combined_closure, b_district)) {
-                    print(paste("closure ", combined_closure, " is subset of district ", b_district))
-                }
                 if (a %in% b_district && subset(combined_closure, b_district)) {
-                    # make sure to store bi-edges in the upper triangle by sorting
-                    # bi_edges <- c(bi_edges, sort(c(a, b)))
-                    sorted_index <- sort(c(a, b))
-                    new_graph[sorted_index[1], sorted_index[2]] <- 100
+                    new_graph[a, b] <- new_graph[b, a] <- 100
                 }
             }
         }
@@ -96,7 +80,6 @@ reachable_closure <- function(graph, vertices, already_fixed=c()) {
             if (length(
                 intersect(descendants(new_graph, vert), district(new_graph, vert))
             ) == 1) {
-                # fix(new_graph, vert)
                 fix_result <- fix(new_graph, vert, already_fixed=fixed_vertices)
                 new_graph <- fix_result$graph
                 fixed_vertices <- fix_result$fixed_vertices
@@ -125,13 +108,6 @@ fix <- function(graph, vertex, already_fixed=c()) {
 
 # works for any number of variables by taking the union over each's parents
 parents <- function(graph, variables, get_names=FALSE) {
-    # print(variables)
-    # print(typeof(variables))
-    # print(class(variables))
-    # for (variable in variables) {print(variable)}
-    # if (!subset(variables, 1:ncol(graph))) {
-    #     stop(paste(variables, " is not a subset of the variables", 1:ncol(graph)))
-    # }
     parents_onevar <- function(var) which(graph[, var] == 1)
     pars <- Reduce(union, sapply(variables, parents_onevar))
     if (!get_names) return(pars)
@@ -199,19 +175,3 @@ district <- function(graph, variable, get_names = FALSE) {
     return(colnames(district))
 }
 
-# give a somewhat functional stack trace
-options(error = function() {
-  calls <- sys.calls()
-  if (length(calls) >= 2L) {
-    sink(stderr())
-    on.exit(sink(NULL))
-    cat("Backtrace:\n")
-    calls <- rev(calls[-length(calls)])
-    for (i in seq_along(calls)) {
-      cat(i, ": ", deparse(calls[[i]], nlines = 1L), "\n", sep = "")
-    }
-  }
-  if (!interactive()) {
-    q(status = 1)
-  }
-})

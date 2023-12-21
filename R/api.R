@@ -35,7 +35,8 @@ greedySearch <- function(
   max.in.degree = Inf,
   dags.only = FALSE,
   direction = "both",
-  verbose = FALSE
+  verbose = FALSE,
+  margs.only = FALSE
 ) {
 
   if (is.null(colnames(cov.mat))) colnames(cov.mat) <- 1:ncol(cov.mat)
@@ -70,7 +71,8 @@ greedySearch <- function(
     verbose = verbose,
     max.pos = neighbourhood.size,
     dags.only = dags.only,
-    eps.conv = eps.conv
+    eps.conv = eps.conv,
+    margs.only = margs.only
   )
 
   res <- if (mc.cores > 1) {

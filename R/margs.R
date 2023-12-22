@@ -1,11 +1,11 @@
-vertex_names <- function(graph) {
+node_names <- function(graph) {
     if (!is.null(colnames(graph))) return(colnames(graph))
     return(1:ncol(graph))
 }
 
 # just work with integer vertices for now
 maximal_arid_projection <- function(graph) {
-    vertices <- 1:ncol(graph)
+    nodes <- node_names(graph)
 
     # initialize a new graph with the same vertices but no edges
     new_graph <- graph
@@ -14,9 +14,9 @@ maximal_arid_projection <- function(graph) {
     # TODO: make this an actual dict of reachable closures
     # format: v=reachable_closure(v)
     reachable_closures = list()
-    ancestors <- lapply(vertices, ancestors, graph=graph)
-    for (a in vertices) {
-        for (b in tail(vertices, -a)) {
+    ancestors <- lapply(nodes, ancestors, graph=graph)
+    for (a in nodes) {
+        for (b in tail(nodes, -a)) {
             u <- NULL
             v <- NULL
             closure <- NULL
@@ -40,12 +40,12 @@ maximal_arid_projection <- function(graph) {
                     added_edge <- TRUE
                 }
             }
-            if (!added_edge) {
+            if (!added_edge) { # semantically superfluous check, but saves time
                 combined_closure_result <- reachable_closure(graph, c(a, b))
                 combined_closure <- combined_closure_result$closure
 
                 b_district <- district(graph, b)
-                if (a %in% b_district && subset(combined_closure, b_district)) {
+                if (a %in% b_district && is_subset(combined_closure, b_district)) {
                     new_graph[a, b] <- new_graph[b, a] <- 100
                 }
             }
@@ -56,12 +56,12 @@ maximal_arid_projection <- function(graph) {
 
 # helper function that returns whether vector smaller is contained within larger
 # note that it also returns TRUE when smaller equals larger
-subset <- function(smaller, larger) {
+is_subset <- function(smaller, larger) {
     all(smaller %in% larger)
 }
 
 
-reachable_closure <- function(graph, vertices, already_fixed=c()) {
+reachable_closure <- function(graph, vertices, already_fixed=c(), get_names = FALSE) {
     # we'll deal with integer id variables for now
     fixed_vertices <- already_fixed
     graph_vertices <- 1:ncol(graph)
@@ -92,6 +92,10 @@ reachable_closure <- function(graph, vertices, already_fixed=c()) {
     }
 
     reachable_closure <- setdiff(graph_vertices, fixed_vertices)
+    if (get_names) {
+        reachable_closure <- node_names(graph)[reachable_closure]
+        fixing_order <- node_names(graph)[fixing_order]
+    }
     return(list(closure=reachable_closure, fixing_order=fixing_order, graph=new_graph))
 }
 
@@ -107,22 +111,22 @@ fix <- function(graph, vertex, already_fixed=c()) {
 
 
 # works for any number of variables by taking the union over each's parents
-parents <- function(graph, variables, get_names=FALSE) {
+parents <- function(graph, variables, get_names = FALSE) {
     parents_onevar <- function(var) which(graph[, var] == 1)
     pars <- Reduce(union, sapply(variables, parents_onevar))
     if (!get_names) return(pars)
-    return(names(pars))
+    return(node_names(graph)[pars])
 }
 
 # works for any number of variables by taking the union over each's parents
-children <- function(graph, variables, get_names=FALSE) {
+children <- function(graph, variables, get_names = FALSE) {
     children_onevar <- function(var) which(graph[var, ] == 1)
     children <- Reduce(union, sapply(variables, children_onevar))
     if (!get_names) return(children)
-    return(names(children))
+    return(node_names(graph)[children])
 }
 
-siblings <- function(graph, variables, get_names=FALSE) {
+siblings <- function(graph, variables, get_names = FALSE) {
     # bi-edges are (often?) only marked once, so we need to check the column *and* the row
     siblings_onevar <- function(var) {
         return(unique(c(
@@ -132,25 +136,21 @@ siblings <- function(graph, variables, get_names=FALSE) {
     }
     siblings <- Reduce(union, lapply(variables, siblings_onevar))
     if (!get_names) return(siblings)
-    return(names(children))
+    return(node_names(graph)[siblings])
 }
 
-ancestors <- function(graph, variables, use_names=FALSE) {
+ancestors <- function(graph, variables, get_names = FALSE) {
     pars <- parents(graph, variables)
     ancs <- unique(c(variables, pars, unlist(lapply(pars, ancestors, graph=graph))))
-    # equivalent clearer code: the ancestors of a node are its parents
-    # and the ancestors of its parents
-    # ancs <- pars
-    # for (parent in pars) {
-    #     ancs <- c(ancs, ancestors(graph, parent))
-    # }
-    return(ancs)
+    if (!get_names) return(ancs)
+    return(node_names(graph)[ancs])
 }
 
-descendants <- function(graph, variables, use_names=FALSE) {
+descendants <- function(graph, variables, get_names = FALSE) {
     childs <- children(graph, variables)
     descs <- unique(c(variables, childs, unlist(lapply(childs, descendants, graph=graph))))
-    return(descs)
+    if (!get_names) return(descs)
+    return(node_names(graph)[descs])
 }
 
 # bing actually improved my version a bit, this one visits the same state less
@@ -172,6 +172,6 @@ district <- function(graph, variable, get_names = FALSE) {
     district <- unique(district)
 
     if (!get_names) return(district)
-    return(colnames(district))
+    return(node_names(graph)[district])
 }
 

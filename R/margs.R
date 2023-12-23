@@ -5,7 +5,7 @@ node_names <- function(graph) {
 
 # just work with integer vertices for now
 maximal_arid_projection <- function(graph) {
-    nodes <- node_names(graph)
+    nodes <- 1:ncol(graph)
 
     # initialize a new graph with the same vertices but no edges
     new_graph <- graph

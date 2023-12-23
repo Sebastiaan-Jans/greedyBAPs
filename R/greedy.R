@@ -152,7 +152,6 @@ computeComponentScore <- function(comp, mg, covMat, data=NULL, n=NULL, maxIter=1
   return(score)
 }
 
-
 getSkeleton <- function(mg) {
   # Transforms mixed graph adjacency matrix into symmetric skeleton matrix
 
@@ -161,7 +160,6 @@ getSkeleton <- function(mg) {
 
   return(s)
 }
-
 
 getVStructures <- function(mg) {
   # Returns list of v-structures (unshielded triples) of mixed graph mg as a
@@ -309,7 +307,8 @@ getCausalEffects <- function(B) {
 
 fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, direction=3,
                              maxIter=10, edge.penalty=1, verbose=TRUE, covMat=NULL,
-                             faithful.eps=0, max.pos=Inf, dags.only=FALSE, eps.conv=1e-12)
+                             faithful.eps=0, max.pos=Inf, dags.only=FALSE, eps.conv=1e-12,
+                             margs.only=FALSE)
 {
   # 1) Find all connected components of mg.start
   # 2) Compute score for each component
@@ -745,6 +744,50 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         cand.cha[[i.c]] <- newstate
       }
     }
+
+    # take candidate (list of graph parts, of which mg is the actual graph)
+    # and take the max arid projection of mg
+    aridify_candidate <- function(candidate) {
+        candidate$mg <- maximal_arid_projection(candidate$mg)
+        component_result <- connectedComponents(candidate$mg)
+        candidate$comp <- component_result$comp
+        candidate$node.comp <- component_result$node.comp
+
+        # compute the score for a component only if it's not already in `scores`
+        candidate$score <- 0
+        for (component in candidate$comp) {
+            component_hash <- componentHash(component, candidate$mg)
+            if (! component_hash %in% names(scores)) {
+                scores[[component_hash]] <<- computeComponentScore(
+                    component,
+                    candidate$mg,
+                    covMat,
+                    data,
+                    n,
+                    maxIter,
+                    edge.penalty,
+                    faithful.eps=faithful.eps
+                )
+            }
+            candidate$score <- candidate$score + scores[[component_hash]]
+        }
+        if (verbose) print(paste("score: ", candidate$score))
+        # should I take the time for this?
+        return(candidate)
+    }
+
+    # If we're only searching MArGs, take the maximal projections of the candidates here.
+    # Don't do so if `dag.only`, because this would be an unnecessary step: every dag is a MArG
+    if (margs.only && !dags.only) {
+        cand.add <- unique(lapply(cand.add, aridify_candidate))
+        cand.del <- unique(lapply(cand.del, aridify_candidate))
+        cand.cha <- unique(lapply(cand.cha, aridify_candidate))
+    }
+
+    # Re-set these weirdly named length variables
+    i.a <- length(cand.add)
+    i.d <- length(cand.del)
+    i.c <- length(cand.cha)
 
     # Compare candidates and select best one
     if (i.a > 0) {

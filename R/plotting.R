@@ -143,38 +143,60 @@ plotScoreCurves <- function(
   times,
   plot.steps = FALSE,
   ylim = NULL,
-  title.start = "Max Score: "
+  title.start = "Maximum found score: ",
+  true_graph_score = NULL
 ) {
+    R <- length(scores)
 
-  R <- length(scores)
+    # Max score
+    score.greedy <- max(sapply(scores, function(scorevec) max(scorevec)))
 
-  # Max score
-  score.greedy <- max(sapply(scores, function(scorevec) max(scorevec)))
-
-  # y-axis limit
-  if (is.null(ylim))
-    ylim <- c(
-      min(sapply(1:R, function(i) min(scores[[i]][scores[[i]]>-Inf]))),
-      max(sapply(1:R, function(i) max(scores[[i]])))
-    )
-
-  # Draw plot
-  draw.plot <- function(x) {
-    xmax <- max(sapply(1:R, function(i) max(x[[i]])))
-    par(mar=c(2.5, 2.5, 2.5, 0.5))  # bottom, left, top, right
-    plot(x[[1]], scores[[1]], xlim=c(0, xmax), ylim=ylim, type="b",
-         xlab="", ylab="", main=paste(title.start, signif(score.greedy, 4), sep=""))
-    if (R > 1) {
-      for (i in 2:R) points(x[[i]], scores[[i]], col=i)
-      for (i in 2:R) lines(x[[i]], scores[[i]], col=i)
+    # y-axis limit
+    if (is.null(ylim)) {
+        ylim <- c(
+        min(sapply(1:R, function(i) min(scores[[i]][scores[[i]]>-Inf]))),
+        max(sapply(1:R, function(i) max(scores[[i]])))
+        )
     }
-  }
 
-  draw.plot(times)
-  if (plot.steps) {
-    dev.new()
-    draw.plot(lapply(scores, function(scorevec) 1:length(scorevec)))
-  }
+    # Draw plot
+    draw.plot <- function(x) {
+        xmax <- max(sapply(1:R, function(i) max(x[[i]])))
+        par(mar=c(5, 5, 2.5, 0.5))  # bottom, left, top, right
+        plot(x[[1]], scores[[1]], xlim=c(0, xmax), ylim=ylim, type="b",
+            xlab="Time (s)",
+            ylab="Score",
+            main=paste(
+                title.start, 
+                signif(score.greedy, 4),
+                ifelse(
+                    !is.null(true_graph_score),
+                    paste(", true graph score: ", signif(true_graph_score, 4)),
+                    ""
+                ),
+                sep=""
+            )
+        )
+        if (R > 1) {
+        for (i in 2:R) points(x[[i]], scores[[i]], col=i)
+        for (i in 2:R) lines(x[[i]], scores[[i]], col=i)
+        }
+        if (!is.null(true_graph_score)) {
+            lines(
+                x=c(0, xmax),
+                y=c(true_graph_score, true_graph_score),
+                col="#00009e59", # dark blue
+                lty=2, # dashed line
+                lwd=3 # a bit thicker than default
+            )
+        }
+    }
+
+    draw.plot(times)
+    if (plot.steps) {
+        dev.new()
+        draw.plot(lapply(scores, function(scorevec) 1:length(scorevec)))
+    }
 }
 
 

@@ -865,6 +865,34 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
 }
 
 
+# Take all the steps necessary to fit and score a graph in isolation. Not recommended to do
+# in a search algorithm because many steps can be skipped, but useful to score the best
+# either of data or covMat must be provided
+score_graph <- function(graph, data=NULL, covMat=NULL, maxIter=10, edge.penalty=1, faithful.eps=0) {
+    if (is.null(covMat)) covMat <- cov(data)
+
+    component_result <- connectedComponents(graph)
+    components <- component_result$comp
+    node.comp <- component_result$node.comp
+
+    # compute the score for a component only if it's not already in `scores`
+    score <- 0
+    for (component in components) {
+        score <- score + computeComponentScore(
+            component,
+            graph,
+            covMat,
+            data,
+            nrow(data),
+            maxIter,
+            edge.penalty,
+            faithful.eps=faithful.eps
+        )
+    }
+    # return(list(score=score, comp=components, node.comp=node.comp))
+    return(score)
+}
+
 findEquivalentModels <- function(state, mgs.seen, scores, score, epsilon,
                                  depth=1, depth.max=1, cumtime=0, time.max=10,
                                  data=NULL, n=NULL, direction=3, maxIter=10,
@@ -1352,7 +1380,6 @@ findEquivalentModels <- function(state, mgs.seen, scores, score, epsilon,
   return(list(res=c(neighbours, unlist(res, recursive=FALSE)), scores=scores,
               mgs.seen=mgs.seen, cumtime=cumtime))
 }
-
 
 fastFindEquivalentModels <- function(state, mgs.seen, scores, score, epsilon, depth.max,
                                      data=NULL, n=NULL, maxIter=10, edge.penalty=1,

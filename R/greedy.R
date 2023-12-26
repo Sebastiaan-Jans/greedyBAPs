@@ -1412,7 +1412,8 @@ fastFindEquivalentModels <- function(state, mgs.seen, scores, score, epsilon, de
 causalEffects <- function(p, max.in.degree, Bdist, Oscale, n, pop.version, R,
                           equivalent.eps, maxIter, maxSteps, depth.max=p*(p-1)/2,
                           time.max=Inf, faithful.eps=0, verbose=TRUE, max.pos=Inf,
-                          mc.cores=1, forward=TRUE, fast=FALSE)
+                          mc.cores=1, forward=TRUE, fast=FALSE,
+                          margs.only=FALSE)
 {
 
   # Generate ground truth
@@ -1436,7 +1437,8 @@ causalEffects <- function(p, max.in.degree, Bdist, Oscale, n, pop.version, R,
     max.steps = maxSteps,
     max.in.degree = max.in.degree,
     verbose = verbose,
-    mc.cores = mc.cores
+    mc.cores = mc.cores,
+    margs.only = margs.only
   )
 
   # Find highest-scoring model

@@ -192,12 +192,18 @@ causalEffectsSimulation <- function(
   max.steps = Inf,
   max.iter.ricf = 10,
   equivalent.eps = 1e-10,
+  margs.only = FALSE,
+  seeds = 1:N,
   verbose = FALSE
 ) {
 
   oneRep <- function(i) {
     print(i)
-    seed <- sample(1e6, 1)
+    if (is.null(seeds)) {
+        seed <- sample(1e6, 1)
+    } else {
+        seed <- seeds[i]
+    }
     set.seed(seed)
     cat("Seed: ", seed, "\n")
     causalEffects(
@@ -212,6 +218,7 @@ causalEffectsSimulation <- function(
       max.iter.ricf,
       max.steps,
       fast = TRUE,
+      margs.only = margs.only,
       verbose = verbose
     )
   }

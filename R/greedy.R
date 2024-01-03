@@ -313,6 +313,7 @@ passes_aridity_checks <- function(graph, aridity) {
     if (aridity == "any" || aridity == "projection") return(TRUE)
     if (aridity == "arid") return(is_arid(graph))
     if (aridity == "maximal-arid") return(is_maximal_arid(graph))
+    stop(paste("\"", aridity, "\" is not a valid aridity setting"))
 }
 
 # note that the marg projection already stores the bi-edges symmetrically

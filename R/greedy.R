@@ -304,11 +304,21 @@ getCausalEffects <- function(B) {
   return(t(solve(diag(ncol(B))-t(B))))
 }
 
+is_acyclic <- function(graph) {
+    directed_part <- graph[graph == 100] <- 0
+    return(ggm::isAcyclic(directed_part))
+}
+
+passes_aridity_checks <- function(graph, aridity) {
+    if (is.null(aridity) || aridity == "projection") return(TRUE)
+    if (aridity == "arid") return(is_arid(graph))
+    if (aridity == "maximal-arid") return(is_maximal_arid(graph))
+}
 
 fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, direction=3,
                              maxIter=10, edge.penalty=1, verbose=TRUE, covMat=NULL,
                              faithful.eps=0, max.pos=Inf, dags.only=FALSE, eps.conv=1e-12,
-                             aridity=NULL, # or "arid", "maximal", "maximal-arid", "projection"
+                             aridity=NULL # or "arid", "maximal", "maximal-arid", "projection"
                             )
 {
   # 1) Find all connected components of mg.start
@@ -409,9 +419,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         # Test if adding a directed edge in the lower triangle still results in an acyclic graph
         newstate <- state
         newstate$mg[pos] <- 1
-        tmp <- newstate$mg
-        tmp[tmp==100] <- 0
-        if (ggm::isAcyclic(tmp)) {
+        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity)) {
           # c2 is the component of the sink of the edge - change this component
           if (c1 != c2) newstate$comp[[c2]]$parents <- sort(unique(c(newstate$comp[[c2]]$parents, pos.vec[1])))
           cname1 <- componentHash(newstate$comp[[c2]], newstate$mg)
@@ -425,9 +433,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         # Do same for upper triangle
         newstate <- state
         newstate$mg[pos.trans] <- 1
-        tmp <- newstate$mg
-        tmp[tmp==100] <- 0
-        if (ggm::isAcyclic(tmp)) {
+        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity)) {
           # c1 is the component of the sink of the edge - change this component
           if (c1 != c2) newstate$comp[[c1]]$parents <- sort(unique(c(newstate$comp[[c1]]$parents, pos.vec[2])))
           cname1 <- componentHash(newstate$comp[[c1]], newstate$mg)
@@ -571,9 +577,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         newstate <- state
         newstate$mg[pos] <- 1
         newstate$mg[pos.trans] <- 0
-        tmp <- newstate$mg
-        tmp[tmp==100] <- 0
-        if (ggm::isAcyclic(tmp)) {
+        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity)) {
           # We might need to split up the component
           # Compute sub-components of changed components
           res <- connectedComponents(newstate$mg[state$comp[[c1]]$cnodes, state$comp[[c1]]$cnodes, drop=FALSE])
@@ -619,9 +623,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         newstate <- state
         newstate$mg[pos] <- 0
         newstate$mg[pos.trans] <- 1
-        tmp <- newstate$mg
-        tmp[tmp==100] <- 0
-        if (ggm::isAcyclic(tmp)) {
+        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity)) {
           # Compute sub-components of changed components
           res <- connectedComponents(newstate$mg[state$comp[[c1]]$cnodes, state$comp[[c1]]$cnodes, drop=FALSE])
           if (length(res$comp) > 1) {
@@ -679,9 +681,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         newstate <- state
         newstate$mg[pos] <- 0
         newstate$mg[pos.trans] <- 1
-        tmp <- newstate$mg
-        tmp[tmp==100] <- 0
-        if (ggm::isAcyclic(tmp)) {
+        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity)) {
           if (c1 == c2) {
             # Both edge-endpoints belong to the same component - update that
             # Update component name

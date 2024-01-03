@@ -309,9 +309,9 @@ is_acyclic <- function(graph) {
     return(ggm::isAcyclic(directed_part))
 }
 
-passes_aridity_checks <- function(graph, aridity) {
+passes_aridity_checks <- function(graph, aridity, edge_type=NULL, check_from_node=NULL) {
     if (aridity == "any" || aridity == "projection") return(TRUE)
-    if (aridity == "arid") return(is_arid(graph))
+    if (aridity == "arid") return(is_arid(graph, edge_type=edge_type, check_from_node=check_from_node))
     if (aridity == "maximal-arid") return(is_maximal_arid(graph))
     stop(paste("\"", aridity, "\" is not a valid aridity setting"))
 }
@@ -321,9 +321,17 @@ is_maximal_arid <- function(graph) {
     return(all(make_symmetric(graph) == maximal_arid_projection(graph)))
 }
 
-is_arid <- function(graph) {
-    for (i_node in 1:ncol(graph)) {
-        if (length(reachable_closure(graph, i_node)$closure) > 1) return(FALSE)
+is_arid <- function(graph, edge_type=NULL, check_from_node=NULL) {
+    if (is.null(edge_type)) {
+        # If no node is provided, we just check the reachable closure of every node.
+        nodes <- 1:ncol(graph)
+    } else if (edge_type == "directed") {
+        nodes <- descendants(graph, check_from_node)
+    } else if (edge_type == "bidirected") {
+        nodes <- district(graph, check_from_node)
+    }
+    for (node in nodes) {
+        if (length(reachable_closure(graph, node)$closure) > 1) return(FALSE)
     }
     return(TRUE)
 }
@@ -405,7 +413,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         newstate <- state
         newstate$mg[pos] <- 100
         newstate$mg[pos.trans] <- 100
-        if (! dags.only && passes_aridity_checks(newstate$mg, aridity)) {
+        if (! dags.only && passes_aridity_checks(newstate$mg, aridity, "bidirected", pos.vec[2])) {
             # New component index: if components are joined, indices could shift
             c1.new <- c1 - as.numeric(c2 < c1)
             if (c1 != c2) {  # Need to join components
@@ -432,7 +440,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         # Test if adding a directed edge in the lower triangle still results in an acyclic graph
         newstate <- state
         newstate$mg[pos] <- 1
-        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity)) {
+        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity, "directed", pos.vec[2])) {
           # c2 is the component of the sink of the edge - change this component
           if (c1 != c2) newstate$comp[[c2]]$parents <- sort(unique(c(newstate$comp[[c2]]$parents, pos.vec[1])))
           cname1 <- componentHash(newstate$comp[[c2]], newstate$mg)
@@ -446,7 +454,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         # Do same for upper triangle
         newstate <- state
         newstate$mg[pos.trans] <- 1
-        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity)) {
+        if (is_acyclic(newstate$mg) && passes_aridity_checks(newstate$mg, aridity, "directed", pos.vec[1])) {
           # c1 is the component of the sink of the edge - change this component
           if (c1 != c2) newstate$comp[[c1]]$parents <- sort(unique(c(newstate$comp[[c1]]$parents, pos.vec[2])))
           cname1 <- componentHash(newstate$comp[[c1]], newstate$mg)

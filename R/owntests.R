@@ -77,6 +77,7 @@ bowfree_also_arid <- t(cbind(
     c(0, 0, 0, 0)
 ))
 plotBAP(bowfree_also_arid)
+plotBAP(maximal_arid_projection(bowfree_also_arid))
 lapply(c(1,2,3,4), reachable_closure, graph=bowfree_also_arid)
 
 bowfree_not_arid <- t(cbind(
@@ -144,3 +145,11 @@ lists <- list(
     list(bluh=3, bla=3)
 )
 lapply(lists, blatimestwo)
+
+non_symmetric <- t(cbind(
+    c(0, 1, 100, 100),
+    c(0, 0, 1, 0),
+    c(100, 0, 0, 0),
+    c(0, 100, 1, 0)
+))
+plotBAP(non_symmetric)

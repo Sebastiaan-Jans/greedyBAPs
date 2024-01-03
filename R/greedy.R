@@ -308,7 +308,8 @@ getCausalEffects <- function(B) {
 fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, direction=3,
                              maxIter=10, edge.penalty=1, verbose=TRUE, covMat=NULL,
                              faithful.eps=0, max.pos=Inf, dags.only=FALSE, eps.conv=1e-12,
-                             margs.only=FALSE)
+                             aridity=NULL, # or "arid", "maximal", "maximal-arid", "projection"
+                            )
 {
   # 1) Find all connected components of mg.start
   # 2) Compute score for each component
@@ -778,7 +779,7 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
 
     # If we're only searching MArGs, take the maximal projections of the candidates here.
     # Don't do so if `dag.only`, because this would be an unnecessary step: every dag is a MArG
-    if (margs.only && !dags.only) {
+    if (aridity == "projection" && !dags.only) {
         cand.add <- unique(lapply(cand.add, aridify_candidate))
         cand.del <- unique(lapply(cand.del, aridify_candidate))
         cand.cha <- unique(lapply(cand.cha, aridify_candidate))
@@ -1440,7 +1441,8 @@ causalEffects <- function(p, max.in.degree, Bdist, Oscale, n, pop.version, R,
                           equivalent.eps, maxIter, maxSteps, depth.max=p*(p-1)/2,
                           time.max=Inf, faithful.eps=0, verbose=TRUE, max.pos=Inf,
                           mc.cores=1, forward=TRUE, fast=FALSE,
-                          margs.only=FALSE)
+                          aridity=NULL # or "arid", "maximal", "maximal-arid", "projection"
+                          )
 {
 
   # Generate ground truth
@@ -1465,7 +1467,7 @@ causalEffects <- function(p, max.in.degree, Bdist, Oscale, n, pop.version, R,
     max.in.degree = max.in.degree,
     verbose = verbose,
     mc.cores = mc.cores,
-    margs.only = margs.only
+    aridity = aridity
   )
 
   # Find highest-scoring model

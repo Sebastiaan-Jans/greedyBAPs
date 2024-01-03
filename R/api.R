@@ -36,7 +36,7 @@ greedySearch <- function(
   dags.only = FALSE,
   direction = "both",
   verbose = FALSE,
-  margs.only = FALSE
+  aridity = NULL # can be "arid", "maximal", "maximal-arid", "projection"
 ) {
 
   if (is.null(colnames(cov.mat))) colnames(cov.mat) <- 1:ncol(cov.mat)
@@ -72,7 +72,7 @@ greedySearch <- function(
     max.pos = neighbourhood.size,
     dags.only = dags.only,
     eps.conv = eps.conv,
-    margs.only = margs.only
+    aridity = aridity
   )
 
   res <- if (mc.cores > 1) {
@@ -192,7 +192,7 @@ causalEffectsSimulation <- function(
   max.steps = Inf,
   max.iter.ricf = 10,
   equivalent.eps = 1e-10,
-  margs.only = FALSE,
+  aridity = NULL, # can be "arid", "maximal", "maximal-arid", "projection"
   seeds = 1:N,
   verbose = FALSE
 ) {
@@ -218,7 +218,7 @@ causalEffectsSimulation <- function(
       max.iter.ricf,
       max.steps,
       fast = TRUE,
-      margs.only = margs.only,
+      aridity = aridity,
       verbose = verbose
     )
   }

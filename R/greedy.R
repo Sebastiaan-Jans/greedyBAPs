@@ -388,32 +388,32 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         c1 <- state$node.comp[pos.vec[1]]
         c2 <- state$node.comp[pos.vec[2]]
 
-        if (! dags.only) {
-          # Add bidirected edge (this is always possible)
-          newstate <- state
-          newstate$mg[pos] <- 100
-          newstate$mg[pos.trans] <- 100
-          # New component index: if components are joined, indices could shift
-          c1.new <- c1 - as.numeric(c2 < c1)
-          if (c1 != c2) {  # Need to join components
-            # Join components (add nodes and parents of 2nd component to 1st one)
-            newstate$comp[[c1]]$cnodes <- sort(c(state$comp[[c1]]$cnodes, state$comp[[c2]]$cnodes))
-            newstate$comp[[c1]]$parents <- sort(setdiff(c(state$comp[[c1]]$parents, state$comp[[c2]]$parents), newstate$comp[[c1]]$cnodes))
-            # Delete 2nd component (WARNING: this changes the indices of comp!)
-            newstate$comp[[c2]] <- NULL
-            # Update node.comp: shift all indices after c2 one down (since c2 was deleted)
-            newstate$node.comp[newstate$node.comp > c2] <- newstate$node.comp[newstate$node.comp > c2] - 1
-            # Update node.comp: change all indices of 2nd component to new index of 1st component
-            newstate$node.comp[state$node.comp==c2] <- c1.new
-          }
-          # Update component name
-          cname1 <- componentHash(newstate$comp[[c1.new]], newstate$mg)
-          names(newstate$comp)[c1.new] <- cname1
-          # Compute score of new component if necessary
-          if (! cname1 %in% names(scores)) scores[[cname1]] <- computeComponentScore(newstate$comp[[c1.new]], newstate$mg, covMat, data, n, maxIter, edge.penalty, faithful.eps=faithful.eps)
-          newstate$score <- state$score - scores[[names(state$comp)[c1]]] - as.numeric(c1!=c2)*scores[[names(state$comp)[c2]]] + scores[[cname1]]
-          i.a <- i.a + 1
-          cand.add[[i.a]] <- newstate
+        # Add bidirected edge, this is no longer always possible, if we want to keep aridity
+        newstate <- state
+        newstate$mg[pos] <- 100
+        newstate$mg[pos.trans] <- 100
+        if (! dags.only && passes_aridity_checks(newstate$mg, aridity)) {
+            # New component index: if components are joined, indices could shift
+            c1.new <- c1 - as.numeric(c2 < c1)
+            if (c1 != c2) {  # Need to join components
+                # Join components (add nodes and parents of 2nd component to 1st one)
+                newstate$comp[[c1]]$cnodes <- sort(c(state$comp[[c1]]$cnodes, state$comp[[c2]]$cnodes))
+                newstate$comp[[c1]]$parents <- sort(setdiff(c(state$comp[[c1]]$parents, state$comp[[c2]]$parents), newstate$comp[[c1]]$cnodes))
+                # Delete 2nd component (WARNING: this changes the indices of comp!)
+                newstate$comp[[c2]] <- NULL
+                # Update node.comp: shift all indices after c2 one down (since c2 was deleted)
+                newstate$node.comp[newstate$node.comp > c2] <- newstate$node.comp[newstate$node.comp > c2] - 1
+                # Update node.comp: change all indices of 2nd component to new index of 1st component
+                newstate$node.comp[state$node.comp==c2] <- c1.new
+            }
+            # Update component name
+            cname1 <- componentHash(newstate$comp[[c1.new]], newstate$mg)
+            names(newstate$comp)[c1.new] <- cname1
+            # Compute score of new component if necessary
+            if (! cname1 %in% names(scores)) scores[[cname1]] <- computeComponentScore(newstate$comp[[c1.new]], newstate$mg, covMat, data, n, maxIter, edge.penalty, faithful.eps=faithful.eps)
+            newstate$score <- state$score - scores[[names(state$comp)[c1]]] - as.numeric(c1!=c2)*scores[[names(state$comp)[c2]]] + scores[[cname1]]
+            i.a <- i.a + 1
+            cand.add[[i.a]] <- newstate
         }
 
         # Test if adding a directed edge in the lower triangle still results in an acyclic graph
@@ -720,25 +720,29 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
           newstate <- state
           newstate$mg[pos] <- 100
           newstate$mg[pos.trans] <- 100
-          # New component index: if components are joined, indices could shift
-          c1.new <- c1 - as.numeric(c2 < c1)
-          if (c1 != c2) {  # Need to join components
-            # Join components (add nodes and parents of 2nd component to 1st one)
-            newstate$comp[[c1]]$cnodes <- sort(c(state$comp[[c1]]$cnodes, state$comp[[c2]]$cnodes))
-            newstate$comp[[c1]]$parents <- sort(setdiff(c(state$comp[[c1]]$parents, state$comp[[c2]]$parents), newstate$comp[[c1]]$cnodes))
-            # Delete 2nd component (WARNING: this changes the indices of comp!)
-            newstate$comp[[c2]] <- NULL
-            # Update node.comp: shift all indices after c2 one down (since c2 was deleted)
-            newstate$node.comp[newstate$node.comp > c2] <- newstate$node.comp[newstate$node.comp > c2] - 1
-            # Update node.comp: change all indices of 2nd component to new index of 1st component
-            newstate$node.comp[state$node.comp==c2] <- c1.new
+          if (passes_aridity_checks(newstate$mg, aridity)) {
+            # New component index: if components are joined, indices could shift
+            c1.new <- c1 - as.numeric(c2 < c1)
+            if (c1 != c2) {  # Need to join components
+                # Join components (add nodes and parents of 2nd component to 1st one)
+                newstate$comp[[c1]]$cnodes <- sort(c(state$comp[[c1]]$cnodes, state$comp[[c2]]$cnodes))
+                newstate$comp[[c1]]$parents <- sort(setdiff(c(state$comp[[c1]]$parents, state$comp[[c2]]$parents), newstate$comp[[c1]]$cnodes))
+                # Delete 2nd component (WARNING: this changes the indices of comp!)
+                newstate$comp[[c2]] <- NULL
+                # Update node.comp: shift all indices after c2 one down (since c2 was deleted)
+                newstate$node.comp[newstate$node.comp > c2] <- newstate$node.comp[newstate$node.comp > c2] - 1
+                # Update node.comp: change all indices of 2nd component to new index of 1st component
+                newstate$node.comp[state$node.comp==c2] <- c1.new
+            }
+            # Update component name
+            cname1 <- componentHash(newstate$comp[[c1.new]], newstate$mg)
+            names(newstate$comp)[c1.new] <- cname1
+            # Compute score of new component if necessary
+            if (! cname1 %in% names(scores)) scores[[cname1]] <- computeComponentScore(newstate$comp[[c1.new]], newstate$mg, covMat, data, n, maxIter, edge.penalty, faithful.eps=faithful.eps)
+            newstate$score <- state$score - scores[[names(state$comp)[c1]]] - as.numeric(c1!=c2)*scores[[names(state$comp)[c2]]] + scores[[cname1]]
+          } else {
+            newstate <- state
           }
-          # Update component name
-          cname1 <- componentHash(newstate$comp[[c1.new]], newstate$mg)
-          names(newstate$comp)[c1.new] <- cname1
-          # Compute score of new component if necessary
-          if (! cname1 %in% names(scores)) scores[[cname1]] <- computeComponentScore(newstate$comp[[c1.new]], newstate$mg, covMat, data, n, maxIter, edge.penalty, faithful.eps=faithful.eps)
-          newstate$score <- state$score - scores[[names(state$comp)[c1]]] - as.numeric(c1!=c2)*scores[[names(state$comp)[c2]]] + scores[[cname1]]
         }
 
         i.c <- i.c + 1

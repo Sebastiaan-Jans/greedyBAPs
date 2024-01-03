@@ -305,20 +305,32 @@ getCausalEffects <- function(B) {
 }
 
 is_acyclic <- function(graph) {
-    directed_part <- graph[graph == 100] <- 0
+    directed_part <- graph * (graph == 1)
     return(ggm::isAcyclic(directed_part))
 }
 
 passes_aridity_checks <- function(graph, aridity) {
-    if (is.null(aridity) || aridity == "projection") return(TRUE)
+    if (aridity == "any" || aridity == "projection") return(TRUE)
     if (aridity == "arid") return(is_arid(graph))
     if (aridity == "maximal-arid") return(is_maximal_arid(graph))
+}
+
+# note that the marg projection already stores the bi-edges symmetrically
+is_maximal_arid <- function(graph) {
+    return(all(make_symmetric(graph) == maximal_arid_projection(graph)))
+}
+
+is_arid <- function(graph) {
+    for (i_node in 1:ncol(graph)) {
+        if (length(reachable_closure(graph, i_node)$closure) > 1) return(FALSE)
+    }
+    return(TRUE)
 }
 
 fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, direction=3,
                              maxIter=10, edge.penalty=1, verbose=TRUE, covMat=NULL,
                              faithful.eps=0, max.pos=Inf, dags.only=FALSE, eps.conv=1e-12,
-                             aridity=NULL # or "arid", "maximal", "maximal-arid", "projection"
+                             aridity="any" # or "arid", "maximal", "maximal-arid", "projection"
                             )
 {
   # 1) Find all connected components of mg.start

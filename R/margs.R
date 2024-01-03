@@ -3,6 +3,20 @@ node_names <- function(graph) {
     return(1:ncol(graph))
 }
 
+# Return a version of the graph where the bi-edges are stored in both transpose index positions
+# example: the edge 2 <-> 4 implies graph[2, 4] == graph[4, 2] == 100
+make_symmetric <- function(graph) {
+    biedge_mask <- graph == 100
+    symmetric_mask <- pmax((biedge_mask), t(biedge_mask))
+    return(100 * symmetric_mask + (graph * (graph != 100)))
+}
+
+transpose_100 <- function(matrix) {
+  matrix[lower.tri(matrix)] <- t(matrix)[lower.tri(matrix)]
+  return(matrix)
+}
+
+
 # just work with integer vertices for now
 maximal_arid_projection <- function(graph) {
     nodes <- 1:ncol(graph)

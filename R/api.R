@@ -233,3 +233,74 @@ causalEffectsSimulation <- function(
 
   list(CE.gt = CE.minabs.gt, CE.greedy = CE.minabs.greedy)
 }
+
+#' Simulate BAPs and compute causal effects of greedy search results and ground truth
+#'
+#' @param N Number of simulation runs
+#' @param p Number of vertices
+#' @param n Number of samples to generate
+#' @param mc.cores Parallelism (number of cores to be used). If set to 1, no parallelism is used. Should be at most N.
+#' @param max.in.degree Maximal allowed in-degree
+#' @param n.restarts Number of restarts
+#' @param max.steps Max number of greedy steps per run
+#' @param max.iter.ricf Max number of iterations in RICF
+#' @param equivalent.eps Maximal allowed score difference for two graphs to be considered equivalent
+#' @param verbose Print extra log output?
+#' @return List containing:
+#'   CE.gt - List of minimal absolute causal effect matrices E (one per simulation run)
+#'     for the ground truths, where (E)_i,j is the causal effect on j on i
+#'   CE.greedy - same for the greedy search results
+#'
+#' @importFrom foreach %dopar%
+#' @export
+customCausalEffectsSimulation <- function(
+  N,
+  p,
+  n,
+  mc.cores = 1,
+  max.in.degree = Inf,
+  n.restarts = 0,
+  max.steps = Inf,
+  max.iter.ricf = 10,
+  equivalent.eps = 1e-10,
+  aridity = "any", # can be "arid", "maximal", "maximal-arid", "projection"
+  seeds = 1:N,
+  verbose = FALSE
+) {
+
+  oneRep <- function(i) {
+    print(i)
+    if (is.null(seeds)) {
+        seed <- sample(1e6, 1)
+    } else {
+        seed <- seeds[i]
+    }
+    set.seed(seed)
+    cat("Seed: ", seed, "\n")
+    customCausalEffects(
+      p = p,
+      max.in.degree = max.in.degree,
+      "snormal",
+      1,
+      n,
+      FALSE,
+      n.restarts,
+      equivalent.eps,
+      max.iter.ricf,
+      max.steps,
+      fast = TRUE,
+      aridity = aridity,
+      verbose = verbose
+    )
+  }
+
+  res <- if (mc.cores > 1) {
+    doParallel::registerDoParallel(cores = mc.cores)
+    foreach::foreach(i = 1:N) %dopar% { oneRep(i) }
+  } else lapply(1:N, oneRep)
+
+  CE.minabs.gt <- lapply(res, function(obj) obj$CE.minabs.gt)
+  CE.minabs.greedy <- lapply(res, function(obj) obj$CE.minabs.greedy)
+
+  list(CE.gt = CE.minabs.gt, CE.greedy = CE.minabs.greedy)
+}

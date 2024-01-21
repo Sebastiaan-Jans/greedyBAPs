@@ -189,19 +189,33 @@ GetSigma <- function(params) {
 
 
 GenerateGroundTruth <- function(p, max.in.degree=Inf, Bdist="snormal", Oscale=1,
-                                faithful.eps=0)
+                                faithful.eps=0, aridity="any")
 {
   res <- list()
   res$mg <- GenerateMG4(p, 1, max.in.degree=max.in.degree)[[1]]
   res$params <- GenerateParams(mg=res$mg, Bdist=Bdist, Oscale=Oscale)
   while (! isFaithful(res$mg, t(res$params$B), res$params$Omega, NULL, 10*faithful.eps)$flag) {
-    print("Ground Truth not faithgful - regenerating...")
+    print("Ground Truth not faithful - regenerating...")
     res$params <- GenerateParams(mg=res$mg, Bdist=Bdist, Oscale=Oscale)
   }
   res$covMat <- GetSigma(res$params)
   return(res)
 }
 
+GenerateAridGroundTruth <- function(p, max.in.degree=Inf, Bdist="snormal", Oscale=1,
+                                faithful.eps=0)
+{
+  res <- list()
+  res$mg <- GenerateMG4(p, 1, max.in.degree=max.in.degree)[[1]]
+  res$mg <- maximal_arid_projection(res$mg)
+  res$params <- GenerateParams(mg=res$mg, Bdist=Bdist, Oscale=Oscale)
+  while (! isFaithful(res$mg, t(res$params$B), res$params$Omega, NULL, 10*faithful.eps)$flag) {
+    print("Ground Truth not faithful - regenerating...")
+    res$params <- GenerateParams(mg=res$mg, Bdist=Bdist, Oscale=Oscale)
+  }
+  res$covMat <- GetSigma(res$params)
+  return(res)
+}
 
 GenerateData <- function(n, params) {
   # Randomly sample from a path diagram with parameters given by params$B

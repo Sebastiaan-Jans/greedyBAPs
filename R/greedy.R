@@ -892,8 +892,8 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
 
 
 # Take all the steps necessary to fit and score a graph in isolation. Not recommended to do
-# in a search algorithm because many steps can be skipped, but useful to score the best
-# either of data or covMat must be provided
+# in a search algorithm because many steps can be skipped, but useful to score the best.
+# Either data or covMat must be provided.
 score_graph <- function(graph, data=NULL, covMat=NULL, maxIter=10, edge.penalty=1, faithful.eps=0) {
     if (is.null(covMat)) covMat <- cov(data)
 
@@ -1487,6 +1487,104 @@ causalEffects <- function(p, max.in.degree, Bdist, Oscale, n, pop.version, R,
     covMat,
     n,
     n.restarts = R,
+    max.iter.ricf = maxIter,
+    max.steps = maxSteps,
+    max.in.degree = max.in.degree,
+    verbose = verbose,
+    mc.cores = mc.cores,
+    aridity = aridity
+  )
+
+  # Find highest-scoring model
+  i <- which.max(sapply(res.greedy$scores, function(scores) scores[length(scores)]))
+
+  # Find equivalent models of greedy result
+  if (fast){
+    tmp <- fastFindEquivalentModels(list(mg=res.greedy$final.bap), c(), list(),
+                                    res.greedy$final.score, equivalent.eps, depth.max=depth.max,
+                                    n=n, maxIter=maxIter, covMat=covMat,
+                                    faithful.eps=faithful.eps)
+  } else {
+    tmp <- findEquivalentModels(list(mg=res.greedy$final.bap), c(), list(),
+                                res.greedy$final.score, equivalent.eps, depth.max=depth.max,
+                                time.max=time.max, n=n, maxIter=maxIter,
+                                covMat=covMat, faithful.eps=faithful.eps)
+  }
+  scores <- tmp$scores
+  equiv.models.greedy <- tmp$res
+  if (tmp$cumtime >= time.max) print("Max time during EC search exceeded!")
+  print(paste("Number of models in emp. EC:", length(tmp$res)))
+
+  # Find equivalent models of ground truth
+  if (fast) {
+    tmp <- fastFindEquivalentModels(list(mg=gt$mg), c(), scores, NA, equivalent.eps,
+                                    depth.max=depth.max, n=n, maxIter=maxIter,
+                                    covMat=covMat, faithful.eps=faithful.eps)
+  } else {
+    tmp <- findEquivalentModels(list(mg=gt$mg), c(), scores, NA, equivalent.eps,
+                                depth.max=depth.max, time.max=time.max,
+                                n=n, maxIter=maxIter, covMat=covMat, faithful.eps=faithful.eps)
+  }
+  equiv.models.gt <- tmp$res
+  if (tmp$cumtime >= time.max) print("Max time during EC search exceeded!")
+  print(paste("Number of models in true EC:", length(tmp$res)))
+
+  # Compute causal effects of greedy result
+  ### TODO: Wrap these up in try(...)
+  CE.greedy <- lapply(equiv.models.greedy,
+                      function(model) getCausalEffects(
+                        fitAncestralGraphCustom(model$mg, covMat, n, maxIter=maxIter)$Bhat))
+  CE.minabs.greedy <- do.call("pmin", lapply(CE.greedy, function(mat) abs(mat))) - diag(p)
+
+  # Compute causal effects of ground truth
+  CE.gt <- lapply(equiv.models.gt,
+                  function(model) getCausalEffects(
+                    fitAncestralGraphCustom(model$mg, covMat, n, maxIter=maxIter)$Bhat))
+  CE.minabs.gt <- do.call("pmin", lapply(CE.gt, function(mat) abs(mat))) - diag(p)
+
+  return(list(gt=gt, covMat=covMat, res.greedy=res.greedy, i=i, equiv.models.gt=equiv.models.gt,
+              equiv.models.greedy=equiv.models.greedy, CE.gt=CE.gt, CE.greedy=CE.greedy,
+              CE.minabs.gt=CE.minabs.gt, CE.minabs.greedy=CE.minabs.greedy, data=data,
+              n=n))
+}
+
+empty_graph <- function(n_nodes) {
+    result <- matrix(0, nrow = n_nodes, n_col = n_nodes)
+    return(result)
+}
+
+customCausalEffects <- function(p, max.in.degree, Bdist, Oscale, n, pop.version, R,
+                          equivalent.eps, maxIter, maxSteps, depth.max=p*(p-1)/2,
+                          time.max=Inf, faithful.eps=0, verbose=TRUE, max.pos=Inf,
+                          mc.cores=1, forward=TRUE, fast=FALSE,
+                          aridity="any", # or "arid", "maximal", "maximal-arid", "projection"
+                          )
+{
+
+  # Generate ground truth
+  gt <- GenerateAridGroundTruth(p, max.in.degree, Bdist, Oscale, faithful.eps=faithful.eps)
+
+  # Create data and covariance matrices
+  if (pop.version) {
+    data <- NULL
+    covMat <- gt$covMat
+  } else {
+    data <- GenerateData(n, gt$params)
+    covMat <- cov(data)
+  }
+
+  if (R == 1) {
+    mg.start = empty_graph(n_nodes = 5)
+  } else {
+    mg.start = NULL
+  }
+
+  # Run R greedy searches
+  res.greedy <- greedySearch(
+    covMat,
+    n,
+    n.restarts = R,
+    mg.start = mg.start,
     max.iter.ricf = maxIter,
     max.steps = maxSteps,
     max.in.degree = max.in.degree,

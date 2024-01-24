@@ -1557,7 +1557,7 @@ customCausalEffects <- function(p, max.in.degree, Bdist, Oscale, n, pop.version,
                           equivalent.eps, maxIter, maxSteps, depth.max=p*(p-1)/2,
                           time.max=Inf, faithful.eps=0, verbose=TRUE, max.pos=Inf,
                           mc.cores=1, forward=TRUE, fast=FALSE,
-                          aridity="any", # or "arid", "maximal", "maximal-arid", "projection"
+                          aridity="any" # or "arid", "maximal", "maximal-arid", "projection"
                           )
 {
 

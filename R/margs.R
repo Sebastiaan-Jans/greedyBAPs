@@ -59,7 +59,8 @@ maximal_arid_projection <- function(graph) {
                 combined_closure <- combined_closure_result$closure
 
                 b_district <- district(graph, b)
-                if (a %in% b_district && is_subset(combined_closure, b_district)) {
+                # if (a %in% b_district && is_subset(combined_closure, b_district)) { % wrong!
+                if (is_bidirected_connected(graph, combined_closure)) {
                     new_graph[a, b] <- new_graph[b, a] <- 100
                 }
             }
@@ -73,7 +74,6 @@ maximal_arid_projection <- function(graph) {
 is_subset <- function(smaller, larger) {
     all(smaller %in% larger)
 }
-
 
 reachable_closure <- function(graph, vertices, already_fixed=c(), get_names = FALSE) {
     # we'll deal with integer id variables for now
@@ -189,3 +189,26 @@ district <- function(graph, variable, get_names = FALSE) {
     return(node_names(graph)[district])
 }
 
+# Return the subgraph containing only the vars in `variables`,
+# leaving colnames and rownames intact
+subgraph <- function(graph, variables) {
+    sub <- graph[variables, variables]
+    colnames(sub) <- rownames(sub) <- variables
+    return(sub)
+}
+
+# Return whether a set of variables is bidirected-connected in graph
+# if safe is TRUE, do not assume bi-edges are correctly stored twice, but costs a copy
+# as.character is required because the subgraph matrix maintains the
+# original indices, which is impossible with non-string indices
+is_bidirected_connected <- function(graph, variable_set, safe=TRUE) {
+    sub <- subgraph(graph, variable_set)
+    if (safe) {
+        sub <- make_symmetric(sub)
+    }
+    # The subgraph must only contain a single district,
+    # checked by taking the district of one and seeing if it contains all
+    # index <- as.character(which(colnames(graph) == variable_set[1])
+
+    return(length(district(sub, 1)) == length(variable_set))
+}

@@ -808,6 +808,15 @@ fastGreedySearch <- function(mg.start, data=NULL, n=NULL, maxSteps=Inf, directio
         cand.add <- unique(lapply(cand.add, aridify_candidate))
         cand.del <- unique(lapply(cand.del, aridify_candidate))
         cand.cha <- unique(lapply(cand.cha, aridify_candidate))
+        # The maximal arid projection might map back to the original, so filter that out
+        # Actually this makes the algorithm much worse, it seems. Perhaps because it forces
+        # it to take a final step after the best solution has already been found.
+        # I've disabled it for now.
+        # num_cands <- length(cand.add) + length(cand.del) + length(cand.cha)
+        # cand.add <- Filter(function(cand) !all(cand$mg == state$mg), cand.add)
+        # cand.del <- Filter(function(cand) !all(cand$mg == state$mg), cand.del)
+        # cand.cha <- Filter(function(cand) !all(cand$mg == state$mg), cand.cha)
+        # new_num_cands <- length(cand.add) + length(cand.del) + length(cand.cha)
     }
 
     # Re-set these weirdly named length variables

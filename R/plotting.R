@@ -90,6 +90,9 @@ plotROCCurve <- function(
   if (precision.recall) FPR[nmax+1,] <- sapply(1:N, function(i) 1)
   FPR.mean <- rowMeans(FPR, na.rm=TRUE)
 
+  # Compute all individual AUC of the runs
+  aucs <- sapply(1:ncol(FPR), function(i) caTools::trapz(FPR[,i], TPR[,i]))
+  
   # Compute AUC
   if (avg.auc) {
     # Average of AUCs of individual curves
@@ -107,8 +110,8 @@ plotROCCurve <- function(
     ylab <- "Mean Precision"
   } else {
     main.part <- paste("ROC Curve (AUC=", round(auc, 4), ")", sep="")
-    xlab <- "Mean FPR"
-    ylab <- "Mean TPR"
+    xlab <- "FPR"
+    ylab <- "TPR"
   }
   # main.part <- "ROC Curves"
 
@@ -118,14 +121,17 @@ plotROCCurve <- function(
   } else {
     title <- main.part
   }
+#   #dev.new()
+#   plot(0, xlim=c(0,1), ylim=c(0,1), xlab=xlab, ylab=ylab, type="n",
+#        main=title)
+  # own version: no title
   #dev.new()
-  plot(0, xlim=c(0,1), ylim=c(0,1), xlab=xlab, ylab=ylab, type="n",
-       main=title)
-  abline(0,1)
+  plot(0, xlim=c(0,1), ylim=c(0,1), xlab=xlab, ylab=ylab, type="n")
   for (i in indices) lines(FPR[,i], TPR[,i], col="gray")
   lines(FPR.mean, TPR.mean, type="b")
+  abline(0,1, type="b")
 
-  list(FPR = FPR, TPR = TPR, auc = auc)
+  list(FPR = FPR, TPR = TPR, auc = auc, aucs = aucs)
 }
 
 
